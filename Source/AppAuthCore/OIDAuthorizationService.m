@@ -121,9 +121,15 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (BOOL)resumeExternalUserAgentFlowWithURL:(NSURL *)URL {
+  // cis webview / registration / "terms and conditions" or "privacy policy" buttons clicks
+  BOOL isTermsConditions = [[URL absoluteString] isEqual: @"cis.registration://agbPublic"];
+  BOOL isPrivacyPolicy = [[URL absoluteString] isEqual: @"cis.registration://privacyPolicy"];
+  
   // rejects URLs that don't match redirect (these may be completely unrelated to the authorization)
   if (![self shouldHandleURL:URL]) {
-    return NO;
+    if (!(isTermsConditions || isPrivacyPolicy)) {
+      return NO;
+    }
   }
   
   AppAuthRequestTrace(@"Authorization Response: %@", URL);
@@ -160,6 +166,11 @@ NS_ASSUME_NONNULL_BEGIN
                                    _request.state,
                                    response.state,
                                    response];
+      if (isTermsConditions) {
+        userInfo[NSLocalizedDescriptionKey] = @"cis.deeplink.termsConditions";
+      } else if (isPrivacyPolicy) {
+        userInfo[NSLocalizedDescriptionKey] = @"cis.deeplink.privacyPolicy";
+      }
       response = nil;
       error = [NSError errorWithDomain:OIDOAuthAuthorizationErrorDomain
                                   code:OIDErrorCodeOAuthAuthorizationClientError
